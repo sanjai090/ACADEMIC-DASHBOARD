@@ -4,10 +4,14 @@ const bodyParser = require('body-parser');
 const session = require('express-session');
 const cors = require('cors');
 const path = require('path');
-const db = require('./database');
+const connectDB = require('./database');
+const { User, Result, SemesterSummary } = require('./models');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Connect to MongoDB
+connectDB();
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -32,15 +36,19 @@ const gradeToPoints = (grade) => {
 app.post('/api/register', async (req, res) => {
     const { reg_no, password, full_name, date_of_birth, current_semester } = req.body;
     try {
-        const { rows: existing } = await db.query('SELECT reg_no FROM users WHERE reg_no = $1', [reg_no]);
-        if (existing.length > 0) {
-            return res.status(500).json({ error: 'User already exists or database error.' });
+        const existing = await User.findOne({ reg_no });
+        if (existing) {
+            return res.status(500).json({ error: 'User already exists.' });
         }
 
-        await db.query(
-            'INSERT INTO users (reg_no, password, full_name, date_of_birth, current_semester, onboarding_complete) VALUES ($1, $2, $3, $4, $5, $6)',
-            [reg_no, password, full_name || '', date_of_birth || null, current_semester || 1, false]
-        );
+        await User.create({
+            reg_no,
+            password,
+            full_name: full_name || '',
+            date_of_birth: date_of_birth || null,
+            current_semester: current_semester || 1,
+            onboarding_complete: false
+        });
 
         res.json({ success: true });
     } catch (err) {
@@ -54,9 +62,9 @@ app.post('/api/login', async (req, res) => {
     const { reg_no, password } = req.body;
 
     try {
-        const { rows } = await db.query('SELECT * FROM users WHERE reg_no = $1', [reg_no]);
+        const user = await User.findOne({ reg_no });
 
-        if (rows.length === 0) {
+        if (!user) {
             if (reg_no === 'admin' && password === 'admin123') {
                 req.session.user = { reg_no: 'admin', full_name: 'Administrator', isAdmin: true };
                 return res.json({ success: true, user: req.session.user, isAdmin: true });
@@ -64,21 +72,19 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials.' });
         }
 
-        const user = rows[0];
-
         if (user.password !== password) {
             return res.status(401).json({ error: 'Invalid credentials.' });
         }
 
-        user.onboarding_complete = !!user.onboarding_complete;
+        const userData = user.toObject();
 
-        if (user.reg_no === 'admin') {
+        if (userData.reg_no === 'admin') {
             req.session.user = { reg_no: 'admin', full_name: 'Administrator', isAdmin: true };
             return res.json({ success: true, user: req.session.user, isAdmin: true });
         }
 
-        req.session.user = user;
-        res.json({ success: true, user });
+        req.session.user = userData;
+        res.json({ success: true, user: userData });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Database error' });
@@ -92,10 +98,9 @@ app.get('/api/me', async (req, res) => {
             return res.json({ loggedIn: true, user: req.session.user, isAdmin: true });
         }
         try {
-            const { rows } = await db.query('SELECT * FROM users WHERE reg_no = $1', [req.session.user.reg_no]);
-            if (rows.length > 0) {
-                const userData = rows[0];
-                userData.onboarding_complete = !!userData.onboarding_complete;
+            const user = await User.findOne({ reg_no: req.session.user.reg_no });
+            if (user) {
+                const userData = user.toObject();
                 req.session.user = userData;
                 res.json({ loggedIn: true, user: userData });
             } else {
@@ -120,25 +125,28 @@ app.post('/api/change-password', async (req, res) => {
     const reg_no = req.session.user.reg_no;
 
     try {
-        const { rows } = await db.query('SELECT * FROM users WHERE reg_no = $1', [reg_no]);
+        const user = await User.findOne({ reg_no });
 
-        if (rows.length === 0) {
+        if (!user) {
             if (reg_no === 'admin' && current_password === 'admin123') {
-                await db.query(
-                    'INSERT INTO users (reg_no, password, full_name, date_of_birth, current_semester, onboarding_complete) VALUES ($1, $2, $3, $4, $5, $6)',
-                    ['admin', new_password, 'Administrator', null, 0, true]
-                );
+                await User.create({
+                    reg_no: 'admin',
+                    password: new_password,
+                    full_name: 'Administrator',
+                    date_of_birth: null,
+                    current_semester: 0,
+                    onboarding_complete: true
+                });
                 return res.json({ success: true });
             }
             return res.status(401).json({ error: 'Incorrect current password.' });
         }
 
-        const user = rows[0];
         if (user.password !== current_password) {
             return res.status(401).json({ error: 'Incorrect current password.' });
         }
 
-        await db.query('UPDATE users SET password = $1 WHERE reg_no = $2', [new_password, reg_no]);
+        await User.updateOne({ reg_no }, { password: new_password });
         res.json({ success: true });
     } catch (err) {
         console.error(err);
@@ -153,43 +161,40 @@ app.post('/api/upload-results', async (req, res) => {
     const { reg_no } = req.session.user;
     const { semester, subjects } = req.body;
 
-    const client = await db.pool.connect();
     try {
-        await client.query('BEGIN');
-
-        await client.query('DELETE FROM results WHERE reg_no = $1 AND semester = $2', [reg_no, Number(semester)]);
+        await Result.deleteMany({ reg_no, semester: Number(semester) });
 
         let totalPoints = 0;
         let totalCredits = 0;
-
-        for (const sub of subjects) {
+        
+        const resultsToInsert = subjects.map(sub => {
             const points = gradeToPoints(sub.grade);
-            await client.query(
-                'INSERT INTO results (reg_no, semester, subject_name, grade, credits, grade_points) VALUES ($1, $2, $3, $4, $5, $6)',
-                [reg_no, Number(semester), sub.name, sub.grade, Number(sub.credits), points]
-            );
             totalPoints += (points * Number(sub.credits));
             totalCredits += Number(sub.credits);
-        }
+            return {
+                reg_no,
+                semester: Number(semester),
+                subject_name: sub.name,
+                grade: sub.grade,
+                credits: Number(sub.credits),
+                grade_points: points
+            };
+        });
+
+        await Result.insertMany(resultsToInsert);
 
         const gpa = totalCredits > 0 ? parseFloat((totalPoints / totalCredits).toFixed(2)) : 0;
 
-        // Upsert semester summary (PostgreSQL syntax)
-        await client.query(
-            `INSERT INTO semester_summaries (reg_no, semester, gpa, total_credits)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (reg_no, semester) DO UPDATE SET gpa = EXCLUDED.gpa, total_credits = EXCLUDED.total_credits`,
-            [reg_no, Number(semester), gpa, totalCredits]
+        await SemesterSummary.findOneAndUpdate(
+            { reg_no, semester: Number(semester) },
+            { gpa, total_credits: totalCredits },
+            { upsert: true, new: true }
         );
 
-        await client.query('COMMIT');
         res.json({ success: true, gpa });
     } catch (err) {
-        await client.query('ROLLBACK');
         console.error(err);
         res.status(500).json({ error: 'Failed to upload results.' });
-    } finally {
-        client.release();
     }
 });
 
@@ -197,7 +202,7 @@ app.post('/api/complete-onboarding', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ error: 'Unauthorized' });
     const { reg_no } = req.session.user;
     try {
-        await db.query('UPDATE users SET onboarding_complete = true WHERE reg_no = $1', [reg_no]);
+        await User.updateOne({ reg_no }, { onboarding_complete: true });
         res.json({ success: true });
     } catch (err) {
         console.error(err);
@@ -208,11 +213,8 @@ app.post('/api/complete-onboarding', async (req, res) => {
 app.get('/api/results/summary', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ error: 'Unauthorized' });
     try {
-        const { rows } = await db.query(
-            'SELECT * FROM semester_summaries WHERE reg_no = $1 ORDER BY semester ASC',
-            [req.session.user.reg_no]
-        );
-        res.json(rows);
+        const summaries = await SemesterSummary.find({ reg_no: req.session.user.reg_no }).sort({ semester: 1 });
+        res.json(summaries);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Query failed' });
@@ -222,11 +224,8 @@ app.get('/api/results/summary', async (req, res) => {
 app.get('/api/results/detailed/:semester', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ error: 'Unauthorized' });
     try {
-        const { rows } = await db.query(
-            'SELECT * FROM results WHERE reg_no = $1 AND semester = $2',
-            [req.session.user.reg_no, Number(req.params.semester)]
-        );
-        res.json(rows);
+        const results = await Result.find({ reg_no: req.session.user.reg_no, semester: Number(req.params.semester) });
+        res.json(results);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Query failed' });
@@ -237,26 +236,58 @@ app.get('/api/results/detailed/:semester', async (req, res) => {
 app.get('/api/admin/students', async (req, res) => {
     if (!req.session.user || !req.session.user.isAdmin) return res.status(401).json({ error: 'Unauthorized' });
     try {
-        const { rows } = await db.query(`
-            SELECT u.reg_no, u.full_name, u.current_semester,
-                   COALESCE(
-                       SUM(s.gpa * s.total_credits) / NULLIF(SUM(s.total_credits), 0),
-                       0
-                   ) AS cgpa
-            FROM users u
-            LEFT JOIN semester_summaries s ON u.reg_no = s.reg_no
-            WHERE u.reg_no != 'admin'
-            GROUP BY u.reg_no, u.full_name, u.current_semester
-        `);
+        // Aggregate to calculate CGPA
+        const result = await User.aggregate([
+            { $match: { reg_no: { $ne: 'admin' } } },
+            {
+                $lookup: {
+                    from: 'semestersummaries',
+                    localField: 'reg_no',
+                    foreignField: 'reg_no',
+                    as: 'summaries'
+                }
+            },
+            {
+                $project: {
+                    reg_no: 1,
+                    full_name: 1,
+                    current_semester: 1,
+                    cgpa: {
+                        $cond: {
+                            if: { $gt: [{ $size: '$summaries' }, 0] },
+                            then: {
+                                $divide: [
+                                    {
+                                        $reduce: {
+                                            input: '$summaries',
+                                            initialValue: 0,
+                                            in: { $add: ['$$value', { $multiply: ['$$this.gpa', '$$this.total_credits'] }] }
+                                        }
+                                    },
+                                    {
+                                        $reduce: {
+                                            input: '$summaries',
+                                            initialValue: 0,
+                                            in: { $add: ['$$value', '$$this.total_credits'] }
+                                        }
+                                    }
+                                ]
+                            },
+                            else: 0
+                        }
+                    }
+                }
+            }
+        ]);
 
-        const result = rows.map(r => ({
+        const formattedResult = result.map(r => ({
             reg_no: r.reg_no,
             full_name: r.full_name,
             current_semester: r.current_semester,
-            cgpa: parseFloat(Number(r.cgpa).toFixed(2))
+            cgpa: r.cgpa ? parseFloat(r.cgpa.toFixed(2)) : 0
         }));
 
-        res.json(result);
+        res.json(formattedResult);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Database error' });
