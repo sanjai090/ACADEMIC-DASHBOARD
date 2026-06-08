@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGPA Elite - Student Hub</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        .view { display: none; }
+        .view.active { display: block; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; padding: 0; }
+            .glass-card { background: white !important; border: none; box-shadow: none; color: black !important; padding: 0 !important; }
+            h1, h2, h3, p, td, th { color: black !important; -webkit-text-fill-color: black !important; }
+        }
+    </style>
+</head>
+<body class="container">
+
+    <!-- Auth View -->
+    <div id="view-auth" class="view active">
+        <div class="glass-header" style="text-align: center; margin-bottom: 2rem;">
+            <h1>CGPA ELITE</h1>
+            <p>Premium Student Analytics & Academic Dashboard</p>
+        </div>
+        <div class="glass-card animate-in" style="max-width: 500px; margin: 0 auto;">
+            <h2 id="auth-title">Welcome Student</h2>
+            <p id="auth-desc" style="margin-bottom: 2rem;">Sign in to access your dashboard.</p>
+            <div class="form-group">
+                <label><i class="fa-solid fa-id-card"></i> Register Number</label>
+                <input type="text" id="reg-no" placeholder="e.g. 212221230001">
+            </div>
+            <div class="form-group" id="name-group" style="display: none;">
+                <div style="margin-bottom: 1rem;">
+                    <label><i class="fa-solid fa-user"></i> Full Name</label>
+                    <input type="text" id="full-name" placeholder="Your Name">
+                </div>
+                <div>
+                    <label><i class="fa-solid fa-calendar"></i> Date of Birth</label>
+                    <input type="date" id="date-of-birth" placeholder="Your Date of Birth">
+                </div>
+            </div>
+            <div class="form-group">
+                <label><i class="fa-solid fa-lock"></i> Password</label>
+                <input type="password" id="password" placeholder="••••••••">
+            </div>
+            <div class="captcha-container">
+                <div class="captcha-image" id="captcha-img">ABC123</div>
+                <input type="text" id="captcha-input" placeholder="Captcha" style="flex: 1; padding: 0.5rem;">
+                <button class="btn" style="width: auto; background: rgba(255,255,255,0.05);" onclick="generateCaptcha()"><i class="fa-solid fa-rotate"></i></button>
+            </div>
+            <button class="btn" id="btn-auth" onclick="handleAuth()">Sign In</button>
+            <p style="text-align: center; margin-top: 1.5rem; color: var(--text-muted);">
+                <span id="toggle-msg">New student?</span>
+                <a href="#" style="color: var(--secondary-color); font-weight: 600;" onclick="toggleAuth(event)">Create Account</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Onboarding View -->
+    <div id="view-onboarding" class="view">
+        <div class="glass-header" style="text-align: center; margin-bottom: 2rem;">
+            <h1>Profile Setup</h1>
+            <p>Welcome! Let's get your academic history ready.</p>
+        </div>
+        <div class="glass-card animate-in" style="max-width: 800px; margin: 0 auto;">
+            <div id="onboarding-step-1">
+                <h2>Current Status</h2>
+                <p>Which semester are you in right now?</p>
+                <select id="current-sem-select" class="form-group" style="padding: 1rem; width: 100%; margin-top: 1rem;">
+                    <option value="1">Semester 1 (Freshman)</option>
+                    <option value="2">Semester 2</option>
+                    <option value="3">Semester 3</option>
+                    <option value="4">Semester 4</option>
+                    <option value="5">Semester 5</option>
+                    <option value="6">Semester 6</option>
+                    <option value="7">Semester 7</option>
+                    <option value="8">Semester 8</option>
+                </select>
+                <button class="btn" onclick="startOnboardingWizard()">Next: Details <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+            <div id="onboarding-wizard" style="display: none;">
+                <!-- Progress Bar -->
+                <div style="margin-bottom:1.5rem;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;">
+                        <span id="onboard-progress-text" style="font-size:0.85rem;color:var(--text-muted);">Semester 1 of 1</span>
+                        <span style="font-size:0.85rem;color:var(--secondary-color);">CSE Curriculum</span>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.05);border-radius:99px;height:6px;overflow:hidden;">
+                        <div id="onboard-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#4361ee,#4cc9f0);border-radius:99px;transition:width 0.4s ease;"></div>
+                    </div>
+                </div>
+                <h2 id="wizard-sem-title">Semester 1 — Enter Your Grades</h2>
+                <p id="wizard-sem-desc" style="margin-bottom:1.5rem;">Subjects are pre-filled from the CSE curriculum. Select the grade you received.</p>
+                <div id="wizard-subjects"></div>
+                <button class="btn" style="background: rgba(255,255,255,0.05); border: 1px dashed var(--glass-border); margin-top: 1rem;" onclick="addWizardRow()">+ Add Subject</button>
+                <button class="btn" style="margin-top: 2rem;" id="wizard-next-btn" onclick="processWizardStep()">Next Semester <i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin View -->
+    <div id="view-admin" class="view">
+        <div class="nav-header no-print">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <i class="fa-solid fa-user-shield" style="font-size: 2rem; color: var(--primary-color);"></i>
+                <h1>Admin Panel</h1>
+            </div>
+            <div class="user-profile">
+                <div style="text-align: right;">
+                    <div style="font-weight: 600;">Administrator</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">admin</div>
+                </div>
+                <div class="avatar" style="background: var(--primary-color);">A</div>
+                <button class="btn" style="width: auto; background: rgba(239, 68, 68, 0.1); color: var(--error);" onclick="logout()"><i class="fa-solid fa-power-off"></i></button>
+            </div>
+        </div>
+
+        <div class="dashboard-main no-print">
+            <div class="sidebar">
+                <a href="#" class="sidebar-link admin-link active" onclick="showAdminTab('directory')"><i class="fa-solid fa-users"></i> Student Directory</a>
+                <a href="#" class="sidebar-link admin-link" onclick="showAdminTab('reports')"><i class="fa-solid fa-file-invoice"></i> Reports</a>
+                <a href="#" class="sidebar-link admin-link" onclick="showAdminTab('toppers')"><i class="fa-solid fa-trophy"></i> Toppers Board</a>
+                <a href="#" class="sidebar-link admin-link" onclick="showAdminTab('settings')"><i class="fa-solid fa-gear"></i> Settings</a>
+            </div>
+            <div id="admin-content">
+                <div id="admin-tab-directory">
+                    <div class="glass-card" style="width: 100%;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                            <h2>Student Directory</h2>
+                            <div style="display: flex; gap: 1rem; align-items: center;">
+                                <label style="color: var(--text-muted); font-size: 0.9rem;">Semester:</label>
+                                <select id="admin-dir-sem" onchange="filterAdminDirectory()" style="padding: 0.5rem; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--glass-border); border-radius: 0.5rem;">
+                                    <option value="">All</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                    <option value="7">7</option>
+                                    <option value="8">8</option>
+                                </select>
+                                <label style="color: var(--text-muted); font-size: 0.9rem;">Min CGPA:</label>
+                                <input type="number" id="admin-dir-cgpa" placeholder="0.0" step="0.1" min="0" max="10" oninput="filterAdminDirectory()" style="width: 80px; padding: 0.5rem; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--glass-border); border-radius: 0.5rem; text-align: center;">
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table id="admin-dir-table">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align: left;">Register Number</th>
+                                        <th style="text-align: left;">Name</th>
+                                        <th style="text-align: center;">Semester</th>
+                                        <th style="text-align: center;">CGPA</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-dir-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="admin-tab-reports" style="display: none;">
+                    <div class="glass-card" style="width: 100%;">
+                        <h2>Generate Reports</h2>
+                        <p style="margin-bottom: 2rem; color: var(--text-muted);">Select criteria to generate a filtered student report in PDF format.</p>
+                        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end; margin-bottom: 2rem;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="color: var(--text-muted); font-size: 0.9rem;">Target Semester:</label>
+                                <select id="admin-rep-sem" style="padding: 1rem; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--glass-border); border-radius: 0.5rem; width: 100%;">
+                                    <option value="">All Semesters</option>
+                                    <option value="1">Semester 1</option>
+                                    <option value="2">Semester 2</option>
+                                    <option value="3">Semester 3</option>
+                                    <option value="4">Semester 4</option>
+                                    <option value="5">Semester 5</option>
+                                    <option value="6">Semester 6</option>
+                                    <option value="7">Semester 7</option>
+                                    <option value="8">Semester 8</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="color: var(--text-muted); font-size: 0.9rem;">Minimum CGPA:</label>
+                                <input type="number" id="admin-rep-cgpa" placeholder="e.g. 8.5" step="0.1" min="0" max="10" style="padding: 1rem; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--glass-border); border-radius: 0.5rem; width: 100%;">
+                            </div>
+                            <div>
+                                <button class="btn" style="width: auto; padding: 1rem 2rem;" onclick="generateAdminReport()"><i class="fa-solid fa-file-pdf"></i> Export PDF Report</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="admin-tab-toppers" style="display: none;">
+                    <div class="glass-card" style="width: 100%;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                            <h2>Toppers Board</h2>
+                            <span style="background: rgba(67, 97, 238, 0.2); color: var(--secondary-color); padding: 0.5rem 1rem; border-radius: 99px; font-weight: bold; font-size: 0.9rem;">Top 20 Ranks</span>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table id="admin-toppers-table">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align: center; width: 80px;">Rank</th>
+                                        <th style="text-align: left;">Register Number</th>
+                                        <th style="text-align: left;">Name</th>
+                                        <th style="text-align: center;">Semester</th>
+                                        <th style="text-align: center;">CGPA</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-toppers-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="admin-tab-settings" style="display: none;">
+                    <div class="glass-card" style="max-width: 500px;">
+                        <h2>Change Password</h2>
+                        <div class="form-group">
+                            <label>Current Password</label>
+                            <input type="password" id="admin-curr-pwd" placeholder="Enter current password">
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="admin-new-pwd" placeholder="Enter new password">
+                        </div>
+                        <button class="btn" onclick="changePassword('admin')"><i class="fa-solid fa-key"></i> Update Password</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard View -->
+    <div id="view-dashboard" class="view">
+        <div class="nav-header no-print">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <i class="fa-solid fa-graduation-cap" style="font-size: 2rem; color: var(--primary-color);"></i>
+                <h1>Dashboard</h1>
+            </div>
+            <div class="user-profile">
+                <div style="text-align: right;">
+                    <div id="user-display-name" style="font-weight: 600;">Student</div>
+                    <div id="user-display-reg" style="font-size: 0.8rem; color: var(--text-muted);">---</div>
+                </div>
+                <div class="avatar" id="user-display-avatar">S</div>
+                <button class="btn" style="width: auto; background: rgba(239, 68, 68, 0.1); color: var(--error);" onclick="logout()"><i class="fa-solid fa-power-off"></i></button>
+            </div>
+        </div>
+
+        <div class="dashboard-main no-print">
+            <div class="sidebar">
+                <a href="#" class="sidebar-link student-link active" onclick="showTab('overview')"><i class="fa-solid fa-chart-line"></i> Overview</a>
+                <a href="#" class="sidebar-link student-link" onclick="showTab('reports')"><i class="fa-solid fa-file-invoice"></i> Reports</a>
+                <a href="#" class="sidebar-link student-link" onclick="showTab('update')"><i class="fa-solid fa-cloud-arrow-up"></i> Update Sem</a>
+                <a href="#" class="sidebar-link student-link" onclick="showTab('settings')"><i class="fa-solid fa-gear"></i> Settings</a>
+            </div>
+            <div id="dashboard-content">
+                <div id="tab-overview">
+                    <div class="stats-grid">
+                        <div class="glass-card stat-card"><div class="stat-label">CGPA</div><div class="stat-value" id="val-cgpa">0.00</div></div>
+                        <div class="glass-card stat-card"><div class="stat-label">TOTAL CREDITS</div><div class="stat-value" id="val-credits">0</div></div>
+                        <div class="glass-card stat-card"><div class="stat-label">SEMESTERS</div><div class="stat-value" id="val-sems">0</div></div>
+                    </div>
+                    <div class="glass-card" style="margin-bottom: 2rem;"><canvas id="mainChart" height="120"></canvas></div>
+                    <div class="glass-card"><h3>Semester Summary</h3><div style="overflow-x:auto;"><table id="summary-table"><thead><tr><th>Semester</th><th>GPA</th><th>Credits</th><th>Status</th></tr></thead><tbody id="summary-body"></tbody></table></div></div>
+                </div>
+                <div id="tab-reports" style="display: none;">
+                    <div class="glass-card">
+                        <h2>Generate Reports</h2>
+                        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                            <button class="btn" style="flex: 1;" onclick="generateReport('consolidated')">Consolidated Report</button>
+                            <select id="sem-report-select" class="btn" style="flex: 1; background: rgba(255,255,255,0.05); color: white;"></select>
+                            <button class="btn" style="flex: 1;" onclick="generateReport('semester')">Semester Report</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="tab-update" style="display: none;">
+                    <div class="glass-card">
+                        <h2>Update Semester Results</h2>
+                        <p style="margin-bottom:1.5rem;">Select a semester, then enter or edit your subject grades.</p>
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-calendar"></i> Select Semester</label>
+                            <select id="update-sem-choice" onchange="loadUpdateSubjects()" style="background:#1e293b;color:#fff;border:1px solid var(--glass-border);padding:0.75rem;border-radius:0.75rem;width:100%;">
+                                <option value="">-- Choose Semester --</option>
+                                <option value="1">Semester 1</option>
+                                <option value="2">Semester 2</option>
+                                <option value="3">Semester 3</option>
+                                <option value="4">Semester 4</option>
+                                <option value="5">Semester 5</option>
+                                <option value="6">Semester 6</option>
+                                <option value="7">Semester 7</option>
+                                <option value="8">Semester 8</option>
+                            </select>
+                        </div>
+                        <div id="update-subjects"></div>
+                        <div id="update-actions" style="display:none;margin-top:1rem;">
+                            <button class="btn" style="background: rgba(255,255,255,0.05); border: 1px dashed var(--glass-border);" onclick="addUpdateRow()">+ Add Subject</button>
+                            <button class="btn" style="margin-top: 1rem;" onclick="saveUpdate()"><i class="fa-solid fa-cloud-arrow-up"></i> Save Results</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="tab-settings" style="display: none;">
+                    <div class="glass-card" style="max-width: 500px;">
+                        <h2>Change Password</h2>
+                        <div class="form-group">
+                            <label>Current Password</label>
+                            <input type="password" id="student-curr-pwd" placeholder="Enter current password">
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="student-new-pwd" placeholder="Enter new password">
+                        </div>
+                        <button class="btn" onclick="changePassword('student')"><i class="fa-solid fa-key"></i> Update Password</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Print View -->
+        <div id="print-view" class="print-only" style="display: none;">
+            <div id="print-content" style="padding: 2rem; color: black !important;"></div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

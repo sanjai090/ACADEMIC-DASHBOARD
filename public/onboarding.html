@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onboarding - CGPA PRO</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="container">
+
+    <div class="glass-header" style="text-align: center; margin-bottom: 2rem;">
+        <h1>Setup Your Profile</h1>
+        <p>Let's get your progress tracked. Enter your previous semester results.</p>
+    </div>
+
+    <div id="onboarding-container" class="glass-card animate-in" style="max-width: 800px; margin: 0 auto;">
+        
+        <div id="step-1">
+            <h2>Current Status</h2>
+            <p>Which semester are you currently in?</p>
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <select id="user-current-sem" style="font-size: 1.25rem; font-weight: 600;">
+                    <option value="1">I'm in Semester 1 (Freshman)</option>
+                    <option value="2">I'm in Semester 2</option>
+                    <option value="3">I'm in Semester 3</option>
+                    <option value="4">I'm in Semester 4</option>
+                    <option value="5">I'm in Semester 5</option>
+                    <option value="6">I'm in Semester 6</option>
+                    <option value="7">I'm in Semester 7</option>
+                    <option value="8">I'm in Semester 8</option>
+                </select>
+            </div>
+            <button class="btn" onclick="startResultsEntry()">Next: Enter Previous Results <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+
+        <div id="step-results" style="display: none;">
+            <h2 id="sem-title">Semester 1 Results</h2>
+            <p id="sem-desc">Enter subjects and grades for this semester.</p>
+
+            <div id="subject-list" style="margin-top: 2rem;">
+                <!-- Dynamically populated subjects -->
+            </div>
+
+            <button class="btn" onclick="addSubjectRow()" style="background: rgba(255,255,255,0.05); margin-top: 1rem; border: 1px dashed var(--glass-border);">
+                <i class="fa-solid fa-plus"></i> Add Another Subject
+            </button>
+
+            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                <button class="btn" id="next-sem-btn" onclick="processNextSemester()">Continue Sem 1 <i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="js/onboarding.js"></script>
+</body>
+</html>

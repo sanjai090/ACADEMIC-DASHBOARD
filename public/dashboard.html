@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - CGPA PRO</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .container { padding: 0; width: 100%; max-width: 100%; }
+            .glass-card { background: white; color: black; border: none; box-shadow: none; padding: 0; }
+            .sidebar { display: none; }
+            .dashboard-main { grid-template-columns: 1fr; }
+            canvas { max-width: 100%; height: auto !important; }
+        }
+    </style>
+</head>
+<body class="container">
+
+    <div class="nav-header no-print">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <i class="fa-solid fa-graduation-cap" style="font-size: 2rem; color: var(--primary-color);"></i>
+            <h1>Student Hub</h1>
+        </div>
+        <div class="user-profile">
+            <div id="username-display" style="text-align: right;">
+                <div style="font-weight: 600;" id="user-name">Loading...</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);" id="user-reg">---</div>
+            </div>
+            <div class="avatar" id="user-avatar">S</div>
+            <button class="btn" style="width: auto; padding: 0.5rem 1rem; background: rgba(239, 68, 68, 0.1); color: var(--error);" onclick="logout()"><i class="fa-solid fa-power-off"></i></button>
+        </div>
+    </div>
+
+    <div class="dashboard-main">
+        
+        <!-- Sidebar Navigation -->
+        <div class="sidebar no-print">
+            <a href="#" class="sidebar-link active" onclick="showTab('overview')"><i class="fa-solid fa-chart-line"></i> Performance Overview</a>
+            <a href="#" class="sidebar-link" onclick="showTab('reports')"><i class="fa-solid fa-file-invoice"></i> Reports & Certificates</a>
+            <a href="#" class="sidebar-link" onclick="showTab('update')"><i class="fa-solid fa-circle-plus"></i> Update Results</a>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="content-container">
+            
+            <!-- Tab: Overview -->
+            <div id="tab-overview" class="animate-in">
+                <div class="stats-grid">
+                    <div class="glass-card stat-card">
+                        <div class="stat-label">CURRENT CGPA</div>
+                        <div class="stat-value" id="cgpa-value">0.00</div>
+                    </div>
+                    <div class="glass-card stat-card">
+                        <div class="stat-label">TOTAL CREDITS</div>
+                        <div class="stat-value" id="credits-value">0</div>
+                    </div>
+                    <div class="glass-card stat-card">
+                        <div class="stat-label">SEMESTERS COMPLETED</div>
+                        <div class="stat-value" id="sem-count">0</div>
+                    </div>
+                </div>
+
+                <div class="glass-card" style="margin-bottom: 2rem;">
+                    <h3>Academic Performance Trend</h3>
+                    <p style="margin-bottom: 1.5rem;">Semester-wise GPA distribution</p>
+                    <canvas id="performanceChart" height="120"></canvas>
+                </div>
+
+                <div class="glass-card">
+                    <h3>Recent Semester Summary</h3>
+                    <div style="overflow-x: auto;">
+                        <table id="summary-table">
+                            <thead>
+                                <tr>
+                                    <th>Semester</th>
+                                    <th>GPA</th>
+                                    <th>Credits Earned</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summary-body">
+                                <!-- Data populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Reports -->
+            <div id="tab-reports" class="animate-in" style="display: none;">
+                <div class="glass-card">
+                    <h2>Academic Reports</h2>
+                    <p>Choose a report type to generate a downloadable PDF or printable document.</p>
+                    
+                    <div style="margin-top: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                        <button class="btn" style="background: rgba(67, 97, 238, 0.1); border: 1px solid var(--primary-color);" onclick="generateConsolidated()">
+                            <i class="fa-solid fa-file-contract"></i> Consolidated Statement
+                        </button>
+                        <select id="report-sem-select" class="btn" style="background: rgba(76, 201, 240, 0.1); border: 1px solid var(--secondary-color); color: var(--text-main);">
+                            <option value="">Select Semester Report</option>
+                            <option value="1">Semester 1</option>
+                            <option value="2">Semester 2</option>
+                            <option value="3">Semester 3</option>
+                            <option value="4">Semester 4</option>
+                        </select>
+                        <button class="btn" style="background: rgba(76, 201, 240, 0.1); border: 1px solid var(--secondary-color);" onclick="generateSemesterReport()">
+                            <i class="fa-solid fa-print"></i> Generate Selected Sem
+                        </button>
+                    </div>
+
+                    <div id="report-preview" class="glass-card" style="margin-top: 2rem; display: none; background: white; color: black !important;">
+                        <!-- Preview for PRINT ONLY -->
+                        <div id="report-content" style="color: black !important; padding: 2rem;">
+                            <!-- Dynamically generated for printing -->
+                        </div>
+                        <button class="btn no-print" onclick="window.print()" style="margin-top: 1rem;">Confirm & Print Report</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Update -->
+            <div id="tab-update" class="animate-in" style="display: none;">
+                <div class="glass-card">
+                    <h2>Update New Semester</h2>
+                    <p>Enter results for your current or newly completed semester.</p>
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <select id="update-sem" style="font-size: 1.1rem;">
+                            <option value="1">Semester 1</option>
+                            <option value="2">Semester 2</option>
+                            <option value="3">Semester 3</option>
+                            <option value="4" selected>Semester 4</option>
+                            <option value="5">Semester 5</option>
+                            <option value="6">Semester 6</option>
+                            <option value="7">Semester 7</option>
+                            <option value="8">Semester 8</option>
+                        </select>
+                    </div>
+
+                    <div id="update-subject-list">
+                        <!-- Dynamic subject rows same as onboarding -->
+                    </div>
+
+                    <button class="btn" onclick="addUpdateSubjectRow()" style="background: rgba(255,255,255,0.05); margin-top: 1rem; border: 1px dashed var(--glass-border);">
+                        <i class="fa-solid fa-plus"></i> Add Subject
+                    </button>
+
+                    <button class="btn" style="margin-top: 2rem;" onclick="submitUpdate()">Update Results <i class="fa-solid fa-cloud-arrow-up"></i></button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
