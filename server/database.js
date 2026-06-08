@@ -1,21 +1,21 @@
-const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, orderBy, updateDoc, writeBatch } = require('firebase/firestore');
+const mysql = require('mysql2/promise');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyDe-hF_71N2OD4bs37y_kDPU-v6lZVzdOg",
-    authDomain: "academic-manager-f2bcf.firebaseapp.com",
-    projectId: "academic-manager-f2bcf",
-    storageBucket: "academic-manager-f2bcf.firebasestorage.app",
-    messagingSenderId: "1091242289947",
-    appId: "1:1091242289947:web:5d8b4bb5938a12b7a7c1be",
-    measurementId: "G-FCDYLDMFV4"
+const pool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'cgpa_db',
+    port: parseInt(process.env.DB_PORT || '3306'),
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+console.log("MySQL connection pool initialized.");
+
+module.exports = {
+    pool,
+    query: (sql, params) => pool.query(sql, params)
 };
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-console.log("Firebase Firestore initialized successfully.");
-
-module.exports = { db, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, orderBy, updateDoc, writeBatch };
