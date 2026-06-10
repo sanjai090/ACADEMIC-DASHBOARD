@@ -5,6 +5,7 @@ const UserSchema = new mongoose.Schema({
     password: { type: String, required: true },
     full_name: { type: String, default: '' },
     date_of_birth: { type: Date },
+    gender: { type: String, default: '' },
     current_semester: { type: Number, default: 1 },
     onboarding_complete: { type: Boolean, default: false }
 });

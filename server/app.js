@@ -34,7 +34,7 @@ const gradeToPoints = (grade) => {
 
 // Registration
 app.post('/api/register', async (req, res) => {
-    const { reg_no, password, full_name, date_of_birth, current_semester } = req.body;
+    const { reg_no, password, full_name, date_of_birth, gender, current_semester } = req.body;
     try {
         const existing = await User.findOne({ reg_no });
         if (existing) {
@@ -46,6 +46,7 @@ app.post('/api/register', async (req, res) => {
             password,
             full_name: full_name || '',
             date_of_birth: date_of_birth || null,
+            gender: gender || '',
             current_semester: current_semester || 1,
             onboarding_complete: false
         });
@@ -151,6 +152,24 @@ app.post('/api/change-password', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to change password.' });
+    }
+});
+
+app.post('/api/update-profile', async (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: 'Unauthorized' });
+    const { full_name, date_of_birth, gender } = req.body;
+    const reg_no = req.session.user.reg_no;
+
+    try {
+        await User.updateOne({ reg_no }, { full_name, date_of_birth, gender });
+        // Update session user as well
+        req.session.user.full_name = full_name;
+        req.session.user.date_of_birth = date_of_birth;
+        req.session.user.gender = gender;
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to update profile.' });
     }
 });
 

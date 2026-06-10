@@ -116,12 +116,14 @@ async function handleAuth() {
     const captcha   = document.getElementById('captcha-input').value.trim();
     const full_name = document.getElementById('full-name').value.trim();
     const date_of_birth = document.getElementById('date-of-birth').value.trim();
+    const genderEl = document.getElementById('gender');
+    const gender = genderEl ? genderEl.value : '';
 
     if (!reg_no || !password) { alert("Please fill in Register Number and Password."); return; }
     if (captcha.toUpperCase() !== currentCaptcha) { alert("Wrong captcha! Try again."); generateCaptcha(); return; }
 
     const endpoint = isLoginMode ? '/api/login' : '/api/register';
-    const body = { reg_no, password, full_name, date_of_birth };
+    const body = { reg_no, password, full_name, date_of_birth, gender };
 
     try {
         const res  = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -270,11 +272,21 @@ async function initDashboard(user) {
     document.getElementById('user-display-name').innerText   = user.full_name || 'Student';
     // Format the date if it exists
     let dobText = '-';
+    let dobRaw = '';
     if (user.date_of_birth) {
         const d = new Date(user.date_of_birth);
         dobText = d.toLocaleDateString('en-GB'); // Converts to DD/MM/YYYY
+        dobRaw = d.toISOString().split('T')[0];
     }
     document.getElementById('user-display-name').dataset.dob = dobText;
+    document.getElementById('user-display-name').dataset.gender = user.gender || '-';
+    
+    const updateFullNameEl = document.getElementById('update-full-name');
+    if(updateFullNameEl) updateFullNameEl.value = user.full_name || '';
+    const updateDobEl = document.getElementById('update-dob');
+    if(updateDobEl) updateDobEl.value = dobRaw;
+    const updateGenderEl = document.getElementById('update-gender');
+    if(updateGenderEl) updateGenderEl.value = user.gender || '';
     
     document.getElementById('user-display-reg').innerText    = user.reg_no;
     document.getElementById('user-display-avatar').innerText = (user.full_name || 'S').charAt(0).toUpperCase();
@@ -374,6 +386,29 @@ function logout() {
     });
 }
 
+async function updateProfile() {
+    const full_name = document.getElementById('update-full-name').value.trim();
+    const date_of_birth = document.getElementById('update-dob').value;
+    const gender = document.getElementById('update-gender').value;
+
+    try {
+        const res = await fetch('/api/update-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ full_name, date_of_birth, gender })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('Profile updated successfully!');
+            checkSession();
+        } else {
+            alert(data.error || 'Failed to update profile.');
+        }
+    } catch (err) {
+        alert('Cannot reach server.');
+    }
+}
+
 // ============================================================
 // REPORTS
 // ============================================================
@@ -388,6 +423,7 @@ async function generateReport(type) {
 
     const name     = document.getElementById('user-display-name').innerText;
     const dob      = document.getElementById('user-display-name').dataset.dob || '-';
+    const gender   = document.getElementById('user-display-name').dataset.gender || '-';
     const reg      = document.getElementById('user-display-reg').innerText;
     const cgpa     = document.getElementById('val-cgpa').innerText;
 
@@ -412,7 +448,7 @@ async function generateReport(type) {
         startY: 50,
         body: [
             [{ content: 'Name:', styles: { fontStyle: 'bold' } }, name, { content: 'Regulation:', styles: { fontStyle: 'bold' } }, '2023'],
-            [{ content: 'Register Number:', styles: { fontStyle: 'bold' } }, reg, { content: 'Gender:', styles: { fontStyle: 'bold' } }, 'Male'],
+            [{ content: 'Register Number:', styles: { fontStyle: 'bold' } }, reg, { content: 'Gender:', styles: { fontStyle: 'bold' } }, gender],
             [{ content: 'Date of Birth:', styles: { fontStyle: 'bold' } }, dob, { content: 'Branch:', styles: { fontStyle: 'bold' } }, 'B.E. - CSE']
         ],
         theme: 'plain',

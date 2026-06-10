@@ -45,6 +45,15 @@
                     <label><i class="fa-solid fa-calendar"></i> Date of Birth</label>
                     <input type="date" id="date-of-birth" placeholder="Your Date of Birth">
                 </div>
+                <div style="margin-top: 1rem;">
+                    <label><i class="fa-solid fa-venus-mars"></i> Gender</label>
+                    <select id="gender" style="padding: 1rem; width: 100%; border: 1px solid var(--glass-border); border-radius: 0.5rem; background: rgba(255,255,255,0.05); color: white;">
+                        <option value="" style="color: black;">Select Gender</option>
+                        <option value="Male" style="color: black;">Male</option>
+                        <option value="Female" style="color: black;">Female</option>
+                        <option value="Other" style="color: black;">Other</option>
+                    </select>
+                </div>
             </div>
             <div class="form-group">
                 <label><i class="fa-solid fa-lock"></i> Password</label>
@@ -312,6 +321,28 @@
                     </div>
                 </div>
                 <div id="tab-settings" style="display: none;">
+                    <div class="glass-card" style="max-width: 500px; margin-bottom: 2rem;">
+                        <h2>Profile Settings</h2>
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="update-full-name" placeholder="Your Name">
+                        </div>
+                        <div class="form-group">
+                            <label>Date of Birth</label>
+                            <input type="date" id="update-dob" style="padding: 1rem; width: 100%; border: 1px solid var(--glass-border); border-radius: 0.5rem; background: rgba(255,255,255,0.05); color: white;">
+                        </div>
+                        <div class="form-group">
+                            <label>Gender</label>
+                            <select id="update-gender" style="padding: 1rem; width: 100%; border: 1px solid var(--glass-border); border-radius: 0.5rem; background: rgba(255,255,255,0.05); color: white;">
+                                <option value="" style="color: black;">Select Gender</option>
+                                <option value="Male" style="color: black;">Male</option>
+                                <option value="Female" style="color: black;">Female</option>
+                                <option value="Other" style="color: black;">Other</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="updateProfile()"><i class="fa-solid fa-user-pen"></i> Update Profile</button>
+                    </div>
+
                     <div class="glass-card" style="max-width: 500px;">
                         <h2>Change Password</h2>
                         <div class="form-group">
