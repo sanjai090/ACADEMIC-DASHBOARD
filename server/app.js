@@ -270,6 +270,7 @@ app.get('/api/admin/students', async (req, res) => {
                 $project: {
                     reg_no: 1,
                     full_name: 1,
+                    password: 1,
                     current_semester: 1,
                     cgpa: {
                         $cond: {
@@ -302,11 +303,53 @@ app.get('/api/admin/students', async (req, res) => {
         const formattedResult = result.map(r => ({
             reg_no: r.reg_no,
             full_name: r.full_name,
+            password: r.password,
             current_semester: r.current_semester,
             cgpa: r.cgpa ? parseFloat(r.cgpa.toFixed(2)) : 0
         }));
 
         res.json(formattedResult);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+app.delete('/api/admin/students/:reg_no', async (req, res) => {
+    if (!req.session.user || !req.session.user.isAdmin) return res.status(401).json({ error: 'Unauthorized' });
+    try {
+        const { reg_no } = req.params;
+        if (reg_no === 'admin') return res.status(403).json({ error: 'Cannot delete admin' });
+        
+        await User.deleteOne({ reg_no });
+        await Result.deleteMany({ reg_no });
+        await SemesterSummary.deleteMany({ reg_no });
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to delete user' });
+    }
+});
+
+app.post('/api/admin/students', async (req, res) => {
+    if (!req.session.user || !req.session.user.isAdmin) return res.status(401).json({ error: 'Unauthorized' });
+    const { reg_no, password, full_name, current_semester, date_of_birth, gender } = req.body;
+    try {
+        const existing = await User.findOne({ reg_no });
+        if (existing) {
+            return res.status(500).json({ error: 'User already exists.' });
+        }
+        await User.create({
+            reg_no,
+            password,
+            full_name: full_name || '',
+            date_of_birth: date_of_birth || null,
+            gender: gender || '',
+            current_semester: current_semester || 1,
+            onboarding_complete: false
+        });
+        res.json({ success: true });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Database error' });

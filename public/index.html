@@ -136,6 +136,7 @@
                 <a href="#" class="sidebar-link admin-link active" onclick="showAdminTab('directory')"><i class="fa-solid fa-users"></i> Student Directory</a>
                 <a href="#" class="sidebar-link admin-link" onclick="showAdminTab('reports')"><i class="fa-solid fa-file-invoice"></i> Reports</a>
                 <a href="#" class="sidebar-link admin-link" onclick="showAdminTab('toppers')"><i class="fa-solid fa-trophy"></i> Toppers Board</a>
+                <a href="#" class="sidebar-link admin-link" onclick="showAdminTab('usermaint')"><i class="fa-solid fa-user-gear"></i> User Maintenance</a>
                 <a href="#" class="sidebar-link admin-link" onclick="showAdminTab('settings')"><i class="fa-solid fa-gear"></i> Settings</a>
             </div>
             <div id="admin-content">
@@ -227,6 +228,65 @@
                                 </thead>
                                 <tbody id="admin-toppers-body">
                                     <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="admin-tab-usermaint" style="display: none;">
+                    <div class="glass-card" style="margin-bottom: 2rem;">
+                        <h2><i class="fa-solid fa-user-plus"></i> Add New User</h2>
+                        <form id="add-user-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                            <div class="input-group">
+                                <i class="fa-solid fa-id-card"></i>
+                                <input type="text" id="add-reg-no" placeholder="Registration No" required style="width: 100%; padding: 0.8rem 1rem 0.8rem 2.5rem; border-radius: 0.5rem; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                            </div>
+                            <div class="input-group">
+                                <i class="fa-solid fa-user"></i>
+                                <input type="text" id="add-name" placeholder="Full Name" required style="width: 100%; padding: 0.8rem 1rem 0.8rem 2.5rem; border-radius: 0.5rem; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                            </div>
+                            <div class="input-group">
+                                <i class="fa-solid fa-lock"></i>
+                                <input type="text" id="add-password" placeholder="Password" required style="width: 100%; padding: 0.8rem 1rem 0.8rem 2.5rem; border-radius: 0.5rem; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                            </div>
+                            <div class="input-group">
+                                <i class="fa-solid fa-book"></i>
+                                <input type="number" id="add-semester" placeholder="Current Semester" min="1" max="8" required style="width: 100%; padding: 0.8rem 1rem 0.8rem 2.5rem; border-radius: 0.5rem; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                            </div>
+                            <div class="input-group">
+                                <i class="fa-solid fa-calendar"></i>
+                                <input type="date" id="add-dob" placeholder="Date of Birth" required style="width: 100%; padding: 0.8rem 1rem 0.8rem 2.5rem; border-radius: 0.5rem; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                            </div>
+                            <div class="input-group">
+                                <i class="fa-solid fa-venus-mars"></i>
+                                <select id="add-gender" required style="width: 100%; padding: 0.8rem 1rem 0.8rem 2.5rem; border-radius: 0.5rem; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                                    <option value="" disabled selected>Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn" style="align-self: end;"><i class="fa-solid fa-plus"></i> Create User</button>
+                        </form>
+                    </div>
+
+                    <div class="glass-card">
+                        <h2><i class="fa-solid fa-users"></i> All Users</h2>
+                        <div style="overflow-x: auto; margin-top: 1rem;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                        <th style="padding: 1rem;">Reg No</th>
+                                        <th style="padding: 1rem;">Name</th>
+                                        <th style="padding: 1rem;">Password</th>
+                                        <th style="padding: 1rem;">Semester</th>
+                                        <th style="padding: 1rem;">CGPA</th>
+                                        <th style="padding: 1rem;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body">
+                                    <tr><td colspan="6" style="padding: 1rem; text-align: center;">Loading users...</td></tr>
                                 </tbody>
                             </table>
                         </div>

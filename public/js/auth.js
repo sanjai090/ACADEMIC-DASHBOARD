@@ -49,7 +49,7 @@ const toggleAuthMode = (e) => {
 };
 
 const handleAuth = async () => {
-    const regNo = document.getElementById('reg-no').value;
+    const regNo = document.getElementById('reg-no').value.trim();
     const password = document.getElementById('password').value;
     const captchaInput = document.getElementById('captcha-input').value;
 
@@ -83,8 +83,9 @@ const handleAuth = async () => {
             showToast(isLoginMode ? "Logged in successfully!" : "Account created!", "success");
             // If just registered, auto-login or redirect to onboard
             if (isLoginMode) {
-                // Check onboarding status
-                if (data.user.onboarding_complete) {
+                if (data.isAdmin) {
+                    window.location.href = "admin.html";
+                } else if (data.user.onboarding_complete) {
                     window.location.href = "dashboard.html";
                 } else {
                     window.location.href = "onboarding.html";
@@ -114,7 +115,9 @@ const checkSession = async () => {
     const response = await fetch('/api/me');
     const data = await response.json();
     if (data.loggedIn) {
-        if (data.user.onboarding_complete) {
+        if (data.isAdmin) {
+            window.location.href = "admin.html";
+        } else if (data.user.onboarding_complete) {
             window.location.href = "dashboard.html";
         } else {
             window.location.href = "onboarding.html";

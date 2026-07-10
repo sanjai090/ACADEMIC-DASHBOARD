@@ -695,11 +695,16 @@ async function initAdminDashboard() {
 }
 
 function showAdminTab(tab) {
-    ['directory','reports','toppers','settings'].forEach((t, i) => {
-        document.getElementById(`admin-tab-${t}`).style.display = t === tab ? 'block' : 'none';
+    ['directory','reports','toppers','usermaint','settings'].forEach((t, i) => {
+        const el = document.getElementById(`admin-tab-${t}`);
+        if(el) el.style.display = t === tab ? 'block' : 'none';
         const link = document.querySelectorAll('.admin-link')[i];
         if (link) { link.classList.toggle('active', t === tab); }
     });
+    
+    if (tab === 'usermaint') {
+        fetchUsersMaint();
+    }
 }
 
 function filterAdminDirectory() {
@@ -847,6 +852,100 @@ async function changePassword(role) {
         }
     } catch {
         alert("Server error.");
+    }
+}
+
+async function fetchUsersMaint() {
+    try {
+        const res = await fetch('/api/admin/students');
+        if (res.status === 401) {
+            window.location.href = 'index.html'; 
+            return;
+        }
+        
+        const users = await res.json();
+        const tbody = document.getElementById('users-table-body');
+        
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="padding: 1rem; text-align: center;">No users found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = users.map(user => `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 1rem;">${user.reg_no}</td>
+                <td style="padding: 1rem;">${user.full_name || 'N/A'}</td>
+                <td style="padding: 1rem;">${user.password}</td>
+                <td style="padding: 1rem;">${user.current_semester}</td>
+                <td style="padding: 1rem;">${user.cgpa}</td>
+                <td style="padding: 1rem;">
+                    <button class="btn" style="padding: 0.5rem 1rem; background: rgba(239, 68, 68, 0.2); color: var(--error); width: auto;" onclick="deleteUser('${user.reg_no}')">
+                        <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        
+        // Attach form listener exactly once
+        const form = document.getElementById('add-user-form');
+        if (form) {
+            form.removeEventListener('submit', handleAddUserForm);
+            form.addEventListener('submit', handleAddUserForm);
+        }
+    } catch (err) {
+        console.error(err);
+        document.getElementById('users-table-body').innerHTML = '<tr><td colspan="6" style="padding: 1rem; text-align: center; color: var(--error);">Error loading users</td></tr>';
+    }
+}
+
+async function handleAddUserForm(e) {
+    e.preventDefault();
+    const reg_no = document.getElementById('add-reg-no').value;
+    const full_name = document.getElementById('add-name').value;
+    const password = document.getElementById('add-password').value;
+    const current_semester = document.getElementById('add-semester').value;
+    const date_of_birth = document.getElementById('add-dob').value;
+    const gender = document.getElementById('add-gender').value;
+
+    try {
+        const res = await fetch('/api/admin/students', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reg_no, full_name, password, current_semester, date_of_birth, gender })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            document.getElementById('add-user-form').reset();
+            fetchUsersMaint();
+        } else {
+            alert(data.error || 'Failed to create user');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('An error occurred');
+    }
+}
+
+async function deleteUser(reg_no) {
+    if (!confirm(`Are you sure you want to delete user ${reg_no}? This will also remove all their results and cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/admin/students/${reg_no}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            fetchUsersMaint();
+        } else {
+            alert(data.error || 'Failed to delete user');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('An error occurred');
     }
 }
 
